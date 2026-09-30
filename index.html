@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Routine — Personal Productivity</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css" />
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js" defer></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" defer></script>
+</head>
+<body>
+
+<!-- ============ SIDEBAR (desktop) ============ -->
+<aside class="sidebar" id="sidebar">
+  <div class="brand">
+    <div class="brand-mark">R</div>
+    <div class="brand-text"><strong>Routine</strong><span>Productivity OS</span></div>
+  </div>
+
+  <nav class="nav">
+    <button class="nav-item active" data-view="today"><span class="ico">◎</span>Today</button>
+    <button class="nav-item" data-view="week"><span class="ico">▤</span>Week</button>
+    <button class="nav-item" data-view="month"><span class="ico">▦</span>Month</button>
+    <button class="nav-item" data-view="year"><span class="ico">◈</span>Year</button>
+    <button class="nav-item" data-view="dashboard"><span class="ico">◔</span>Dashboard</button>
+    <button class="nav-item" data-view="categories"><span class="ico">◐</span>Categories</button>
+  </nav>
+
+  <div class="side-goal">
+    <div class="side-goal-head">
+      <span>Today's goal</span>
+      <strong id="sideGoalPct">0%</strong>
+    </div>
+    <div class="ring small" id="sideRing">
+      <svg viewBox="0 0 36 36"><circle class="ring-bg" cx="18" cy="18" r="15.9"/><circle class="ring-fg" id="sideRingFg" cx="18" cy="18" r="15.9"/></svg>
+    </div>
+    <p id="sideGoalText">No tasks yet today.</p>
+  </div>
+
+  <div class="side-foot">
+    <button class="ghost-btn" id="themeToggle" title="Toggle theme"><span id="themeIcon">◑</span><span id="themeLabel">Auto</span></button>
+    <button class="ghost-btn" id="importBtn">⇪ Import</button>
+    <button class="ghost-btn" id="exportBtn">⇩ Export</button>
+  </div>
+</aside>
+
+<!-- ============ MAIN ============ -->
+<main class="main">
+
+  <!-- Header -->
+  <header class="topbar">
+    <button class="icon-btn only-mobile" id="menuBtn">☰</button>
+    <div class="greeting">
+      <h1 id="greetText">Good Morning 👋</h1>
+      <p id="greetDate">Wednesday, 30 September</p>
+    </div>
+    <div class="clock">
+      <span id="clockTime">10:42 AM</span>
+      <span id="clockTz" class="muted"></span>
+    </div>
+    <div class="top-actions">
+      <div class="search-wrap">
+        <span class="search-ico">⌕</span>
+        <input id="searchInput" placeholder="Search tasks…  (/)" autocomplete="off" />
+        <button class="clear-search" id="clearSearch" hidden>✕</button>
+      </div>
+      <button class="primary-btn" id="addBtn">＋ Add Task</button>
+      <button class="icon-btn only-mobile" id="notifBtn" title="Enable reminders">🔔</button>
+    </div>
+  </header>
+
+  <!-- Quick add -->
+  <div class="quickadd" id="quickAddWrap">
+    <input id="quickAdd" placeholder="Quick add…  e.g.  Study 19:00 2h #Study High" autocomplete="off" />
+    <button class="primary-btn" id="quickAddBtn">Add</button>
+  </div>
+
+  <!-- Filters row -->
+  <div class="filterbar">
+    <div class="tabs" id="viewTabs">
+      <button class="tab active" data-view="today">Today</button>
+      <button class="tab" data-view="week">Week</button>
+      <button class="tab" data-view="month">Month</button>
+      <button class="tab" data-view="year">Year</button>
+    </div>
+    <div class="filters">
+      <select id="filterCategory"><option value="">All categories</option></select>
+      <select id="filterPriority">
+        <option value="">All priorities</option>
+        <option value="high">High</option>
+        <option value="medium">Medium</option>
+        <option value="low">Low</option>
+      </select>
+      <select id="filterStatus">
+        <option value="">All statuses</option>
+        <option value="pending">Pending</option>
+        <option value="completed">Completed</option>
+        <option value="skipped">Skipped</option>
+      </select>
+      <select id="sortBy">
+        <option value="time">Sort: Time</option>
+        <option value="priority">Sort: Priority</option>
+        <option value="created">Sort: Created</option>
+        <option value="status">Sort: Status</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- Stat strip -->
+  <section class="stat-strip" id="statStrip"></section>
+
+  <!-- Views -->
+  <section id="viewRoot"></section>
+
+  <!-- Dashboard (only on dashboard view) -->
+  <section id="dashRoot" class="dash" hidden></section>
+
+  <!-- Categories view -->
+  <section id="catRoot" class="cat-view" hidden></section>
+
+</main>
+
+<!-- ============ MOBILE BOTTOM NAV ============ -->
+<nav class="bottom-nav">
+  <button class="bn-item active" data-view="today"><span>◎</span>Today</button>
+  <button class="bn-item" data-view="week"><span>▤</span>Week</button>
+  <button class="bn-item" data-view="month"><span>▦</span>Month</button>
+  <button class="bn-item" data-view="dashboard"><span>◔</span>Stats</button>
+  <button class="bn-fab" id="fabAdd">＋</button>
+</nav>
+
+<!-- ============ MODAL: TASK ============ -->
+<div class="modal-backdrop" id="taskModal" hidden>
+  <div class="modal" role="dialog" aria-modal="true">
+    <div class="modal-head">
+      <h2 id="modalTitle">New Task</h2>
+      <button class="icon-btn" id="modalClose">✕</button>
+    </div>
+    <form id="taskForm" class="modal-body">
+      <input type="hidden" id="f_id" />
+      <label class="field full">
+        <span>Title *</span>
+        <input id="f_title" required placeholder="e.g. Study Mathematics" />
+      </label>
+      <label class="field full">
+        <span>Notes</span>
+        <textarea id="f_desc" rows="2" placeholder="Optional details…"></textarea>
+      </label>
+      <label class="field"><span>Date</span><input type="date" id="f_date" required /></label>
+      <label class="field"><span>Start time</span><input type="time" id="f_start" /></label>
+      <label class="field"><span>End time</span><input type="time" id="f_end" /></label>
+      <label class="field">
+        <span>Repeat</span>
+        <select id="f_recurrence">
+          <option value="none">One-time</option>
+          <option value="daily">Daily</option>
+          <option value="weekly">Weekly</option>
+          <option value="monthly">Monthly</option>
+          <option value="yearly">Yearly</option>
+          <option value="weekdays">Weekdays (Mon–Fri)</option>
+          <option value="custom">Custom days…</option>
+        </select>
+      </label>
+      <div class="field full custom-days" id="customDaysWrap" hidden>
+        <span>Repeat on</span>
+        <div class="daychips" id="dayChips">
+          <label><input type="checkbox" value="1"><span>Mo</span></label>
+          <label><input type="checkbox" value="2"><span>Tu</span></label>
+          <label><input type="checkbox" value="3"><span>We</span></label>
+          <label><input type="checkbox" value="4"><span>Th</span></label>
+          <label><input type="checkbox" value="5"><span>Fr</span></label>
+          <label><input type="checkbox" value="6"><span>Sa</span></label>
+          <label><input type="checkbox" value="0"><span>Su</span></label>
+        </div>
+      </div>
+      <label class="field"><span>Category</span><select id="f_category"></select></label>
+      <label class="field">
+        <span>Priority</span>
+        <select id="f_priority">
+          <option value="low">Low</option>
+          <option value="medium" selected>Medium</option>
+          <option value="high">High</option>
+        </select>
+      </label>
+      <label class="field full">
+        <span>Tags (comma separated)</span>
+        <input id="f_tags" placeholder="math, exam" />
+      </label>
+      <label class="field full check-row">
+        <input type="checkbox" id="f_reminder" />
+        <span>Remind me before start (browser notification)</span>
+      </label>
+      <label class="field full" id="remindMinutesWrap" hidden>
+        <span>Remind me (minutes before)</span>
+        <input type="number" id="f_remindMinutes" min="0" max="1440" value="10" />
+      </label>
+      <div class="modal-foot full">
+        <button type="button" class="danger-btn" id="deleteBtn" hidden>Delete</button>
+        <button type="button" class="ghost-btn" id="dupBtn" hidden>Duplicate</button>
+        <div class="spacer"></div>
+        <button type="button" class="ghost-btn" id="cancelBtn">Cancel</button>
+        <button type="submit" class="primary-btn" id="saveBtn">Save Task</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ============ MODAL: CATEGORIES ============ -->
+<div class="modal-backdrop" id="catModal" hidden>
+  <div class="modal small" role="dialog" aria-modal="true">
+    <div class="modal-head">
+      <h2 id="catModalTitle">New Category</h2>
+      <button class="icon-btn" id="catModalClose">✕</button>
+    </div>
+    <form id="catForm" class="modal-body">
+      <input type="hidden" id="c_id" />
+      <label class="field full"><span>Name *</span><input id="c_name" required /></label>
+      <label class="field full"><span>Color</span><input type="color" id="c_color" value="#6C8CFF" /></label>
+      <label class="field full"><span>Icon (emoji or letter)</span><input id="c_icon" maxlength="2" value="◆" /></label>
+      <div class="modal-foot full">
+        <button type="button" class="danger-btn" id="catDeleteBtn" hidden>Delete</button>
+        <div class="spacer"></div>
+        <button type="button" class="ghost-btn" id="catCancelBtn">Cancel</button>
+        <button type="submit" class="primary-btn">Save</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ============ FOCUS MODE ============ -->
+<div class="focus-overlay" id="focusOverlay" hidden>
+  <div class="focus-box">
+    <p class="muted" id="focusKicker">Focus mode</p>
+    <h2 id="focusTitle">—</h2>
+    <p id="focusMeta" class="muted"></p>
+    <div class="focus-timer" id="focusTimer">00:00</div>
+    <div class="focus-actions">
+      <button class="primary-btn" id="focusDone">Mark complete</button>
+      <button class="ghost-btn" id="focusExit">Exit</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ IMPORT MODAL ============ -->
+<div class="modal-backdrop" id="importModal" hidden>
+  <div class="modal" role="dialog" aria-modal="true">
+    <div class="modal-head">
+      <h2>Import Tasks</h2>
+      <button class="icon-btn" id="importClose">✕</button>
+    </div>
+    <div class="modal-body">
+      <p class="muted">Upload an <strong>.xlsx</strong> or <strong>.csv</strong> file. Expected columns:</p>
+      <pre class="code-block">title, description, date, startTime, endTime, category, priority, status, recurrence, tags</pre>
+      <input type="file" id="importFile" accept=".xlsx,.xls,.csv" />
+      <div id="importReport" class="import-report"></div>
+      <div class="modal-foot">
+        <label class="check-row"><input type="checkbox" id="importSkipDup" checked /><span>Skip duplicates</span></label>
+        <div class="spacer"></div>
+        <button class="ghost-btn" id="importCancel">Cancel</button>
+        <button class="primary-btn" id="importConfirm" disabled>Import</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ EXPORT MODAL ============ -->
+<div class="modal-backdrop" id="exportModal" hidden>
+  <div class="modal small" role="dialog" aria-modal="true">
+    <div class="modal-head">
+      <h2>Export</h2>
+      <button class="icon-btn" id="exportClose">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="export-grid">
+        <button class="export-card" data-export="all-xlsx"><strong>All tasks</strong><span>.xlsx</span></button>
+        <button class="export-card" data-export="all-csv"><strong>All tasks</strong><span>.csv</span></button>
+        <button class="export-card" data-export="done-xlsx"><strong>Completed</strong><span>.xlsx</span></button>
+        <button class="export-card" data-export="pending-xlsx"><strong>Pending</strong><span>.xlsx</span></button>
+        <button class="export-card" data-export="stats-xlsx"><strong>Statistics</strong><span>.xlsx</span></button>
+        <button class="export-card" data-export="backup-json"><strong>Full backup</strong><span>.json</span></button>
+      </div>
+      <div class="modal-foot">
+        <div class="spacer"></div>
+        <button class="ghost-btn" id="exportCancel">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ TOASTS ============ -->
+<div class="toast-stack" id="toastStack"></div>
+
+<script src="app.js" defer></script>
+</body>
+</html>
